@@ -101,10 +101,10 @@ fn parse_nes(code: &str, file: &File, base_offset: u64) -> (u64, u8) {
             ((res_data[3] as u16) << (4 * 0)) 
         };
         
-        let mut check_nibble = [0_u8];
-        file.read_at(&mut check_nibble[..], address as u64 + base_offset).expect("Unable to read ROM file");
-        println!("Address: {address:X}\nValue: {:X}\nCheck: {:X}\nLocation: {:X}", res_data[6], res_data[7], address as u64 + base_offset);
-        return if check_nibble[0] != res_data[7] { (address as u64 + base_offset, check_nibble[0]) } else { (address as u64 + base_offset, res_data[6]) };
+        let mut check_byte = [0_u8];
+        file.read_at(&mut check_byte[..], address as u64 + base_offset).expect("Unable to read ROM file");
+        println!("Address: {address:X}\nValue: {:X}\nCheck: {:X}\nLocation: {:X}", (res_data[4] << 4) + res_data[5], (res_data[6] << 4) + res_data[7], address as u64 + base_offset);
+        return if check_byte[0] != ((res_data[6] << 4) + res_data[7]) { (address as u64 + base_offset, check_byte[0]) } else { (address as u64 + base_offset, (res_data[4] << 4) + res_data[5]) };
     } else { // invalid state
         eprintln!("Invalid code length for {code} ({}), expected 6 or 8", code.len());
         panic!();
