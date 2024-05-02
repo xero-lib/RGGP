@@ -28,7 +28,7 @@ struct Args {
     rom_out: PathBuf,
 }
 
-fn parse_nes(code: &str) -> (u16, u8) {
+fn parse_nes(code: &str, file: &File) -> (u16, u8) {
     if code.len() == 6 { //  unchecked code variation
         // convert code chars to predesignated usize values
         let data_hex: Vec<u8> = code.chars().map(|i| {
@@ -43,8 +43,8 @@ fn parse_nes(code: &str) -> (u16, u8) {
 
         // bit manupulation of u8s
         /*
-            1111 2222 3333 4444 5555 6666
-            -444 5666 2333 4555 1222 6111 
+            0000 1111 2222 3333 4444 5555
+            -333 4555 1222 3444 0111 5000 
          */
 
         let mut res_data: [u8; 6] = [0, 0, 0, 0, 0, 0];
@@ -66,8 +66,46 @@ fn parse_nes(code: &str) -> (u16, u8) {
         let value: u8 = (res_data[4] << 4) + res_data[5];
 
         return (address, value);
+    } else if code.len() == 8 {
+        let data_hex: Vec<u8> = code.chars().map(|i| {
+            match NES_CONVERSION.iter().position(|&c| c == i) {
+                Some(x) => x as u8,
+                None => {
+                    eprintln!("Invalid code input");
+                    std::process::exit(32);
+                }
+            }
+        }).collect();
+
+        // bit manupulation of u8s
+        /*
+            0000 1111 2222 3333 4444 5555 6666 7777
+            -333 4555 1222 3444 0111 7000 6777 5666
+         */
+
+        let mut res_data: [u8; 8] = [0, 0, 0, 0, 0, 0, 0, 0];
+        
+        res_data[0] = (data_hex[3] & 0b0111)                          as u8;
+        res_data[1] = (data_hex[5] & 0b0111) + (data_hex[4] & 0b1000) as u8;
+        res_data[2] = (data_hex[2] & 0b0111) + (data_hex[1] & 0b1000) as u8;
+        res_data[3] = (data_hex[4] & 0b0111) + (data_hex[3] & 0b1000) as u8;
+        res_data[4] = (data_hex[1] & 0b0111) + (data_hex[0] & 0b1000) as u8;
+        res_data[5] = (data_hex[0] & 0b0111) + (data_hex[5] & 0b1000) as u8;
+        res_data[6] = (data_hex[7] & 0b0111) + (data_hex[6] & 0b1000) as u8;
+        res_data[7] = (data_hex[6] & 0b0111) + (data_hex[5] & 0b1000) as u8;
+    
+        let address: u16 = {
+            ((res_data[0] as u16) << (4 * 3)) +
+            ((res_data[1] as u16) << (4 * 2)) +
+            ((res_data[2] as u16) << (4 * 1)) +
+            ((res_data[3] as u16) << (4 * 0)) 
+        };
+        
+        let mut check_nibble = [0_u8];
+        file.read_at(&mut check_nibble[..], address as u64).expect("Unable to read ROM file");
+        return if check_nibble[0] != res_data[7] { (address, check_nibble[0]) } else { (address, res_data[6]) };
     } else {
-        todo!()
+        panic!("Invalid code length")
     }
 
 }
@@ -100,7 +138,7 @@ fn main() {
             ( Genesis | SG ) | ( MegaDrive | MD ) => { todo!("Unemplimented") },
             
             Nintendo | NES => {
-                let res = parse_nes(code);
+                let res = parse_nes(code, &file);
                 (res.0 + 0x10, res.1) /* + 0x10 for header offset */
             },
 
