@@ -66,7 +66,7 @@ fn parse_nes(code: &str, file: &File, base_offset: u16) -> (u16, u8) {
         let value: u8 = (res_data[4] << 4) + res_data[5];
 
         return (address, value);
-    } else if code.len() == 8 {
+    } else if code.len() == 8 { // checked code variation
         let data_hex: Vec<u8> = code.chars().map(|i| {
             match NES_CONVERSION.iter().position(|&c| c == i) {
                 Some(x) => x as u8,
@@ -104,10 +104,10 @@ fn parse_nes(code: &str, file: &File, base_offset: u16) -> (u16, u8) {
         let mut check_nibble = [0_u8];
         file.read_at(&mut check_nibble[..], (address + base_offset) as u64).expect("Unable to read ROM file");
         return if check_nibble[0] != res_data[7] { (address + base_offset, check_nibble[0]) } else { (address + base_offset, res_data[6]) };
-    } else {
-        panic!("Invalid code length")
+    } else { // invalid state
+        eprintln!("Invalid code length for {code} ({}), expected 6 or 8", code.len());
+        panic!();
     }
-
 }
 
 fn main() {
