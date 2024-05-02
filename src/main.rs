@@ -28,7 +28,7 @@ struct Args {
     rom_out: PathBuf,
 }
 
-fn parse_nes(code: &str, file: &File, base_offset: u16) -> (u16, u8) {
+fn parse_nes(code: &str, file: &File, base_offset: u64) -> (u64, u8) {
     if code.len() == 6 { //  unchecked code variation
         // convert code chars to predesignated usize values
         let data_hex: Vec<u8> = code.chars().map(|i| {
@@ -56,11 +56,11 @@ fn parse_nes(code: &str, file: &File, base_offset: u16) -> (u16, u8) {
         res_data[4] = (data_hex[1] & 0b0111) + (data_hex[0] & 0b1000) as u8;
         res_data[5] = (data_hex[0] & 0b0111) + (data_hex[5] & 0b1000) as u8;
     
-        let address: u16 = {
-            ((res_data[0] as u16) << (4 * 3)) +
-            ((res_data[1] as u16) << (4 * 2)) +
-            ((res_data[2] as u16) << (4 * 1)) +
-            ((res_data[3] as u16) << (4 * 0)) 
+        let address: u64 = {
+            ((res_data[0] as u64) << (4 * 3)) +
+            ((res_data[1] as u64) << (4 * 2)) +
+            ((res_data[2] as u64) << (4 * 1)) +
+            ((res_data[3] as u64) << (4 * 0)) 
         };
 
         let value: u8 = (res_data[4] << 4) + res_data[5];
@@ -102,8 +102,8 @@ fn parse_nes(code: &str, file: &File, base_offset: u16) -> (u16, u8) {
         };
         
         let mut check_nibble = [0_u8];
-        file.read_at(&mut check_nibble[..], (address + base_offset) as u64).expect("Unable to read ROM file");
-        return if check_nibble[0] != res_data[7] { (address + base_offset, check_nibble[0]) } else { (address + base_offset, res_data[6]) };
+        file.read_at(&mut check_nibble[..], (address as u64 + base_offset) as u64).expect("Unable to read ROM file");
+        return if check_nibble[0] != res_data[7] { (address as u64 + base_offset, check_nibble[0]) } else { (address as u64 + base_offset, res_data[6]) };
     } else { // invalid state
         eprintln!("Invalid code length for {code} ({}), expected 6 or 8", code.len());
         panic!();
@@ -137,7 +137,7 @@ fn main() {
         ( Genesis | SG ) | ( MegaDrive | MD ) => { todo!("Unemplimented") },
         
         Nintendo | NES => {
-            let mut global_offset = 0x10 as u16;
+            let mut global_offset = 0x10_u64;
 
             for code in codes {
                 let (offset, data) = parse_nes(code, &file, global_offset);
