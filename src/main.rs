@@ -122,7 +122,7 @@ fn main() {
 
     let _ = copy(&args.rom_in, &args.rom_out);
 
-    let Ok(file) = File::options().write(true).open(&args.rom_out) else {
+    let Ok(file) = File::options().write(true).read(true).open(&args.rom_out) else {
         eprintln!("Unable to open ROM file for reading");
         if args.rom_out.exists() { remove_file(args.rom_out).unwrap(); }
         return;
