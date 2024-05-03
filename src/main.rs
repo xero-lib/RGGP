@@ -63,9 +63,7 @@ fn parse_nes(code: &str, file: &File, base_offset: u64) -> (u64, u8) {
             ((res_data[3] as u64) << (4 * 0)) 
         };
 
-        let value: u8 = (res_data[4] << 4) + res_data[5];
-
-        return (address, value);
+        return (address + base_offset, (res_data[4] << 4) + res_data[5]);
     } else if code.len() == 8 { // checked code variation
         let data_hex: Vec<u8> = code.chars().map(|i| {
             match NES_CONVERSION.iter().position(|&c| c == i) {
